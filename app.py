@@ -336,11 +336,12 @@ def main():
     if st.session_state.page == "create_user":
         create_user_page()
     elif st.session_state.page == "login":
-        authenticator.login('Login', 'main')
+        # Actualización de la llamada a login()
+        name, authentication_status, username = authenticator.login('Login', 'main', ['username', 'password'])
         
-        if st.session_state["authentication_status"]:
+        if authentication_status:
             authenticator.logout('Logout', 'main')
-            st.write(f'Bienvenido *{st.session_state["name"]}*')
+            st.write(f'Bienvenido *{name}*')
             
             if "calculator_page" not in st.session_state:
                 st.session_state.calculator_page = "intro"
@@ -370,9 +371,9 @@ def main():
                 
                 if st.button("Cambiar escenario"):
                     st.session_state.calculator_page = "scenario_selection"
-        elif st.session_state["authentication_status"] == False:
+        elif authentication_status == False:
             st.error('Username/password is incorrect')
-        elif st.session_state["authentication_status"] == None:
+        elif authentication_status == None:
             st.warning('Please enter your username and password')
         
         if st.button("Crear nuevo usuario"):
