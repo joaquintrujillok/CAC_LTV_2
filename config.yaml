@@ -1,0 +1,21 @@
+cookie:
+  expiry_days: 30
+  key: b8925d8f0e46fa96c681d4cf634e54e8
+  name: cac_ltv_auth_cookie
+credentials:
+  usernames:
+    JTrujillo:
+      email: joaquintrujillok@gmail.com
+      name: Joaquin Trujillo
+      password: $2b$12$oCpXJArsS8jRaZunTVGcq.XpnqUF2uTlWiGLN.EDsFhVUaOlhklmO
+    jsmith:
+      email: joaquintrujillok@gmail.com
+      name: Jtrujillo
+      password: $2b$12$rQ7DUu9P.FzmQ4zn58qzlOGdpJZ1joRcvYJoUy7zj8GvzRyV96rVO
+    rbriggs:
+      email: rbriggs@gmail.com
+      name: Rebecca Briggs
+      password: $2b$12$0TBEVWGJJnlDsK8KqCWuPOWy0cxDJjvIbYvJvdqttP81t5hfgHcOe
+preauthorized:
+  emails:
+  - joaquintrujillok@gmail.com
