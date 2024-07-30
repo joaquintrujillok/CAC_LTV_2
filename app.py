@@ -5,7 +5,6 @@ from yaml.loader import SafeLoader
 import sqlite3
 import datetime
 import os
-import random
 
 # Configuración de la base de datos
 def init_db():
@@ -14,7 +13,7 @@ def init_db():
     else:  # Desarrollo local
         db_path = 'cac_ltv_data.db'
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS calculations
                  (id INTEGER PRIMARY KEY, 
@@ -26,8 +25,6 @@ def init_db():
                   notes TEXT)''')
     conn.commit()
     return conn
-
-conn = init_db()
 
 # Funciones de configuración
 def load_config():
@@ -42,6 +39,8 @@ def save_config(config):
         with open('config.yaml', 'w') as file:
             yaml.dump(config, file, default_flow_style=False)
 
+# Inicialización
+conn = init_db()
 config = load_config()
 authenticator = stauth.Authenticate(
     config['credentials'],
@@ -70,12 +69,8 @@ def get_user_calculations(username):
     c.execute("SELECT * FROM calculations WHERE username = ? ORDER BY date DESC", (username,))
     return c.fetchall()
 
-def generate_simple_challenge():
-    a = random.randint(1, 10)
-    b = random.randint(1, 10)
-    return f"{a} + {b}", str(a + b)
-
 # ... [Continúa en la Parte 2] ...
+
 # Funciones de cálculo
 def calculate_cac(total_acquisition_cost, total_customers):
     return total_acquisition_cost / total_customers
@@ -193,6 +188,7 @@ def calculator_cooperative():
     return ltv, calculate_cac(parse_clp(total_acquisition_cost), total_new_members)
 
 # ... [Continúa en la Parte 3] ...
+
 # Funciones para mostrar resultados y recomendaciones
 def get_industry_benchmarks(scenario):
     benchmarks = {
@@ -288,7 +284,6 @@ def display_results(ltv, cac, scenario):
         st.write(f"Notas: {calc[6]}")
         st.write("---")
 
-# Funciones de autenticación y registro
 def create_user_page():
     st.title("Crear nuevo usuario")
     
@@ -298,18 +293,9 @@ def create_user_page():
     new_password = st.text_input("Contraseña", type="password")
     confirm_password = st.text_input("Confirmar contraseña", type="password")
 
-    if 'challenge' not in st.session_state:
-        st.session_state.challenge, st.session_state.challenge_answer = generate_simple_challenge()
-    
-    st.write(f"Por favor, resuelve esta operación simple: {st.session_state.challenge}")
-    challenge_input = st.text_input("Tu respuesta")
-
     if st.button("Crear usuario"):
         if new_password != confirm_password:
             st.error("Las contraseñas no coinciden")
-        elif challenge_input != st.session_state.challenge_answer:
-            st.error("Respuesta incorrecta")
-            st.session_state.challenge, st.session_state.challenge_answer = generate_simple_challenge()
         else:
             config = load_config()
             if new_username in config['credentials']['usernames']:
@@ -325,10 +311,7 @@ def create_user_page():
                 st.success("Usuario creado exitosamente")
                 st.info("Por favor, inicia sesión con tu nuevo usuario")
                 st.session_state.page = "login"
-                del st.session_state.challenge
-                del st.session_state.challenge_answer
 
-# Función principal
 def main():
     if 'page' not in st.session_state:
         st.session_state.page = "login"
@@ -336,15 +319,47 @@ def main():
     if st.session_state.page == "create_user":
         create_user_page()
     elif st.session_state.page == "login":
-        # Corrección de la llamada a login()
         name, authentication_status, username = authenticator.login('Login', 'main')
         
-        # El resto de tu función main() permanece igual
         if authentication_status:
             authenticator.logout('Logout', 'main')
             st.write(f'Bienvenido *{name}*')
             
-            # ... (resto del código)
+            if "calculator_page" not in st.session_state:
+                st.session_state.calculator_page = "intro"
+
+            if st.session_state.calculator_page == "intro":
+                st.title("Calculadora de CAC y LTV")
+                st.write("Bienvenido a la calculadora de Customer Acquisition Cost (CAC) y Lifetime Value (LTV).")
+                if st.button("Comenzar"):
+                    st.session_state.calculator_page = "scenario_selection"
+            elif st.session_state.calculator_page == "scenario_selection":
+                st.title("Selección de Escenario")
+                scenario = st.selectbox("Elige tu modelo de negocio", ["SaaS", "E-commerce", "Servicios B2B", "Cooperativa"])
+                if st.button("Continuar"):
+                    st.session_state.scenario = scenario
+                    st.session_state.calculator_page = "calculator"
+            elif st.session_state.calculator_page == "calculator":
+                if st.session_state.scenario == "SaaS":
+                    ltv, cac = calculator_saas()
+                elif st.session_state.scenario == "E-commerce":
+                    ltv, cac = calculator_ecommerce()
+                elif st.session_state.scenario == "Servicios B2B":
+                    ltv, cac = calculator_b2b()
+                elif st.session_state.scenario == "Cooperativa":
+                    ltv, cac = calculator_cooperative()
+                
+                display_results(ltv, cac, st.session_state.scenario)
+                
+                if st.button("Cambiar escenario"):
+                    st.session_state.calculator_page = "scenario_selection"
+        elif authentication_status == False:
+            st.error('Username/password is incorrect')
+        elif authentication_status == None:
+            st.warning('Please enter your username and password')
+        
+        if st.button("Crear nuevo usuario"):
+            st.session_state.page = "create_user"
 
 if __name__ == "__main__":
     try:
