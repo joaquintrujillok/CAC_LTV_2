@@ -5,6 +5,7 @@ from yaml.loader import SafeLoader
 import sqlite3
 import datetime
 import os
+import plotly.graph_objs as go
 
 # Configuración de la base de datos
 def init_db():
@@ -68,6 +69,28 @@ def get_user_calculations(username):
     c = conn.cursor()
     c.execute("SELECT * FROM calculations WHERE username = ? ORDER BY date DESC", (username,))
     return c.fetchall()
+
+# Funciones para gráficos
+def create_cac_ltv_graph(ltv, cac):
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=['LTV', 'CAC'], y=[ltv, cac], name='Valores'))
+    fig.update_layout(title='Comparación LTV vs CAC',
+                      xaxis_title='Métricas',
+                      yaxis_title='Valor (CLP)')
+    return fig
+
+def create_history_graph(calculations):
+    dates = [calc[2] for calc in calculations]
+    ltvs = [calc[4] for calc in calculations]
+    cacs = [calc[5] for calc in calculations]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=dates, y=ltvs, mode='lines+markers', name='LTV'))
+    fig.add_trace(go.Scatter(x=dates, y=cacs, mode='lines+markers', name='CAC'))
+    fig.update_layout(title='Historial de LTV y CAC',
+                      xaxis_title='Fecha',
+                      yaxis_title='Valor (CLP)')
+    return fig
 
 # ... [Continúa en la Parte 2] ...
 
@@ -255,6 +278,10 @@ def display_results(ltv, cac, scenario):
 
     payback_period = cac / (ltv / 12)  # Asumiendo que LTV está en valor anual
 
+    # Agregar gráfico de comparación LTV vs CAC
+    fig = create_cac_ltv_graph(ltv, cac)
+    st.plotly_chart(fig)
+
     st.header("Conclusiones y Recomendaciones")
     
     general_rec, specific_rec, benchmark, payback_rec = get_recommendations(ratio, scenario, payback_period)
@@ -279,6 +306,10 @@ def display_results(ltv, cac, scenario):
 
     st.header("Historial de cálculos")
     calculations = get_user_calculations(st.session_state["username"])
+    if calculations:
+        history_fig = create_history_graph(calculations)
+        st.plotly_chart(history_fig)
+    
     for calc in calculations:
         st.write(f"Fecha: {calc[2]}, Escenario: {calc[3]}, LTV: {calc[4]}, CAC: {calc[5]}")
         st.write(f"Notas: {calc[6]}")
